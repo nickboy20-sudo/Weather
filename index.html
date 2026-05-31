@@ -829,7 +829,7 @@ let COUNTRY = 'Romania';
 let allData = null;
 let selectedDay = 0;
 let precipChart = null, tempChart = null, hourlyChart = null, windChart = null;
-let radarLayer = 'rain-3h-accumulation';
+let radarLayer = 'radar';
 let searchTimeout = null;
 let focusedSuggestion = -1;
 
@@ -962,16 +962,12 @@ async function useGPSLocation() {
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
       try {
-        // Reverse geocode via Open-Meteo geocoding isn't available for reverse,
-        // so use nominatim
         const r = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ro`,
-          { headers: { 'Accept-Language': 'ro' } }
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ro`
         );
         const geo = await r.json();
-        const addr = geo.address || {};
-        const city = addr.city || addr.town || addr.village || addr.municipality || addr.county || 'Locația mea';
-        const country = addr.country || '';
+        const city = geo.city || geo.locality || geo.principalSubdivision || 'Locația mea';
+        const country = geo.countryName || '';
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Bucharest';
 
         LAT = lat; LON = lon;
@@ -1332,63 +1328,35 @@ function buildPrecipTotalCard(data) {
 }
 
 function buildWindySection() {
-  const layers = [
-    { key: 'rain-3h-accumulation', label: '🌧 Ploaie' },
-    { key: 'wind',                 label: '💨 Vânt' },
-    { key: 'temperature-2m',       label: '🌡 Temp' },
-    { key: 'clouds',               label: '☁️ Nori' },
-  ];
-  const btns = layers.map(l =>
-    `<button class="windy-layer-btn ${l.key===radarLayer?'active':''}" data-layer="${l.key}" onclick="setRadarLayer('${l.key}')">${l.label}</button>`
-  ).join('');
   return `
     <div class="windy-section">
-      <div class="section-label">Hartă radar &amp; prognoză</div>
+      <div class="section-label">Hartă radar &amp; precipitații</div>
       <div class="windy-card">
         <div class="windy-card-header">
           <div class="windy-card-title">
             <div class="windy-dot"></div>
             Ventusky · Radar Live
           </div>
-          <div class="windy-overlay-btns">${btns}</div>
         </div>
         <div class="windy-frame-wrap">
           <div class="windy-loader" id="windyLoader">
             <div class="spinner" style="border-top-color:var(--teal)"></div>
             <div class="windy-loader-text">Se încarcă harta radar…</div>
           </div>
-          ${buildRadarIframe()}
+          <iframe
+            src="https://embed.ventusky.com/?p=${LAT};${LON};7&l=radar"
+            allowfullscreen
+            onload="onRadarLoad()"
+            style="width:100%;height:100%;border:none;display:block;border-radius:0 0 var(--r2) var(--r2);">
+          </iframe>
         </div>
       </div>
     </div>`;
 }
 
-function buildRadarIframe() {
-  const src = `https://embed.ventusky.com/?p=${LAT};${LON};7&l=${radarLayer}`;
-  return `<iframe id="radarFrame" src="${src}" allowfullscreen
-    onload="onRadarLoad()"
-    style="width:100%;height:100%;border:none;display:block;border-radius:0 0 var(--r2) var(--r2);"></iframe>`;
-}
-
 function onRadarLoad() {
   const loader = document.getElementById('windyLoader');
   if (loader) { loader.classList.add('hidden'); setTimeout(() => loader.remove(), 400); }
-}
-
-function setRadarLayer(layer) {
-  radarLayer = layer;
-  document.querySelectorAll('.windy-layer-btn').forEach(btn =>
-    btn.classList.toggle('active', btn.dataset.layer === layer)
-  );
-  const wrap = document.querySelector('.windy-frame-wrap');
-  if (wrap) {
-    wrap.innerHTML = `
-      <div class="windy-loader" id="windyLoader">
-        <div class="spinner" style="border-top-color:var(--teal)"></div>
-        <div class="windy-loader-text">Se schimbă stratul…</div>
-      </div>
-      ${buildRadarIframe()}`;
-  }
 }
 
 // ── Charts ──
