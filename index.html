@@ -272,6 +272,7 @@
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   }
   .current-cond { font-size: 14px; color: var(--text2); text-align: right; margin-top: 4px; }
+  .current-rain-remain { font-size: 13px; color: var(--rain); text-align: right; margin-top: 6px; letter-spacing: 0.2px; }
   .current-icon {font-size: 48px; line-height: 1;text-align: right; margin-bottom: 4px; filter: drop-shadow(0 0 12px rgba(255,255,255,0.2));}
 
   /* ── Sun arc ── */
@@ -553,6 +554,7 @@
     .now-temp { text-align: left; display: flex; align-items: baseline; gap: 12px; }
     .current-temp { font-size: 56px; }
     .current-cond { text-align: left; margin-top: 0; }
+    .current-rain-remain { text-align: left; }
     .sun-section {
       grid-template-columns: 1fr 1fr;
       grid-template-rows: auto auto;
@@ -638,148 +640,229 @@
     background: linear-gradient(180deg, #06090f 0%, #0d1420 30%, #131c2d 60%, #1a2035 100%);
   }
 
-  /* ── Sun orb (clear day) ── */
+  /* ══════════════════════════════════════
+     SUN (zi)
+  ══════════════════════════════════════ */
   .sun-orb {
     position: absolute;
-    width: 180px; height: 180px; border-radius: 50%;
-    top: 40px; right: 12%;
-    background: radial-gradient(circle, rgba(255,230,60,0.85) 0%, rgba(255,190,20,0.5) 40%, rgba(255,140,0,0.15) 70%, transparent 90%);
-    filter: blur(4px);
-    animation: sun-pulse 5s ease-in-out infinite;
+    width: 200px; height: 200px; border-radius: 50%;
+    top: 30px; right: 10%;
+    background: radial-gradient(circle, rgba(255,240,80,0.95) 0%, rgba(255,200,30,0.65) 35%, rgba(255,140,0,0.2) 65%, transparent 85%);
+    filter: blur(3px);
+    animation: sun-pulse 6s ease-in-out infinite;
     pointer-events: none;
   }
-  @keyframes sun-pulse {
-    0%, 100% { transform: scale(1); opacity: 0.85; }
-    50% { transform: scale(1.08); opacity: 1; }
-  }
-  /* sun rays */
-  .sun-rays {
+  .sun-corona {
     position: absolute;
-    width: 220px; height: 220px; border-radius: 50%;
-    top: 20px; right: calc(12% - 20px);
-    background: radial-gradient(circle, rgba(255,220,0,0.12) 30%, rgba(255,180,0,0.06) 60%, transparent 80%);
-    animation: sun-pulse 5s ease-in-out infinite;
-    filter: blur(12px);
+    width: 320px; height: 320px; border-radius: 50%;
+    top: -30px; right: calc(10% - 60px);
+    background: radial-gradient(circle, rgba(255,220,40,0.18) 20%, rgba(255,170,0,0.08) 55%, transparent 75%);
+    filter: blur(20px);
+    animation: sun-pulse 6s ease-in-out infinite reverse;
     pointer-events: none;
+  }
+  .sun-ray {
+    position: absolute;
+    top: 0; right: 10%; width: 200px; height: 200px;
+    pointer-events: none;
+  }
+  .sun-ray::before, .sun-ray::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 600px; height: 1px;
+    transform-origin: left center;
+    background: linear-gradient(to right, rgba(255,220,40,0.22), transparent);
+    animation: ray-spin 20s linear infinite;
+  }
+  .sun-ray::after { animation-direction: reverse; animation-duration: 30s; width: 500px; }
+  @keyframes ray-spin { to { transform: rotate(360deg); } }
+  @keyframes sun-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.88; filter: blur(3px); }
+    50% { transform: scale(1.1); opacity: 1; filter: blur(5px); }
+  }
+  /* heat shimmer */
+  .heat-shimmer {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 35%;
+    background: linear-gradient(0deg, rgba(255,180,30,0.05) 0%, transparent 100%);
+    animation: shimmer-wave 4s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes shimmer-wave {
+    0%, 100% { opacity: 0.3; transform: scaleY(1); }
+    50% { opacity: 0.7; transform: scaleY(1.05); }
   }
 
-  /* ── Moon (clear night) ── */
+  /* ══════════════════════════════════════
+     MOON & STARS (noapte)
+  ══════════════════════════════════════ */
   .moon-orb {
     position: absolute;
-    width: 90px; height: 90px; border-radius: 50%;
-    top: 70px; right: 14%;
-    background: radial-gradient(circle, rgba(210,225,255,0.9) 30%, rgba(160,185,240,0.4) 65%, transparent 85%);
-    filter: blur(2px);
-    animation: moon-glow 7s ease-in-out infinite;
+    width: 100px; height: 100px; border-radius: 50%;
+    top: 60px; right: 13%;
+    background: radial-gradient(circle at 38% 38%, rgba(230,240,255,0.95) 25%, rgba(190,210,255,0.55) 55%, transparent 80%);
+    filter: blur(1.5px);
+    animation: moon-glow 8s ease-in-out infinite;
     pointer-events: none;
-    box-shadow: 0 0 40px rgba(160,185,240,0.3);
+    box-shadow: 0 0 60px rgba(160,190,255,0.35), 0 0 120px rgba(130,160,240,0.12);
+  }
+  .moon-halo {
+    position: absolute;
+    width: 200px; height: 200px; border-radius: 50%;
+    top: 10px; right: calc(13% - 50px);
+    background: radial-gradient(circle, transparent 40%, rgba(160,190,255,0.1) 60%, transparent 75%);
+    filter: blur(8px);
+    animation: moon-glow 8s ease-in-out infinite;
+    pointer-events: none;
   }
   @keyframes moon-glow {
-    0%, 100% { opacity: 0.8; }
-    50% { opacity: 1; }
+    0%, 100% { opacity: 0.75; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.04); }
   }
-  /* stars */
   .star {
     position: absolute;
-    width: 2px; height: 2px; border-radius: 50%;
-    background: rgba(220,230,255,0.8);
-    animation: star-twinkle linear infinite;
+    border-radius: 50%;
+    background: rgba(220,235,255,0.9);
+    animation: star-twinkle ease-in-out infinite;
+    pointer-events: none;
   }
   @keyframes star-twinkle {
-    0%, 100% { opacity: 0.2; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.4); }
+    0%, 100% { opacity: 0.15; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.3); }
+  }
+  .shooting-star {
+    position: absolute;
+    width: 120px; height: 1.5px;
+    background: linear-gradient(to right, transparent, rgba(220,235,255,0.9), transparent);
+    border-radius: 2px;
+    animation: shoot linear forwards;
+    pointer-events: none;
+  }
+  @keyframes shoot {
+    0% { opacity: 0; transform: translateX(0) translateY(0); }
+    10% { opacity: 1; }
+    90% { opacity: 0.6; }
+    100% { opacity: 0; transform: translateX(250px) translateY(120px); }
   }
 
-  /* ── Clouds ── */
+  /* ══════════════════════════════════════
+     CLOUDS
+  ══════════════════════════════════════ */
   .cloud {
     position: absolute;
     border-radius: 50%;
-    filter: blur(18px);
-    opacity: 0.35;
+    filter: blur(22px);
     animation: cloud-drift linear infinite;
     pointer-events: none;
   }
   @keyframes cloud-drift {
-    0% { transform: translateX(-80px); }
-    100% { transform: translateX(calc(100vw + 80px)); }
+    0% { transform: translateX(-120px) translateY(0); }
+    50% { transform: translateX(calc(50vw)) translateY(-8px); }
+    100% { transform: translateX(calc(100vw + 120px)) translateY(0); }
   }
 
-  /* ── Rain drops ── */
+  /* ══════════════════════════════════════
+     RAIN
+  ══════════════════════════════════════ */
   .rain-container {
     position: absolute; inset: 0; overflow: hidden; pointer-events: none;
   }
   .rain-drop {
     position: absolute;
-    top: -8%;
-    width: 1.5px;
-    background: linear-gradient(transparent, rgba(180,220,255,0.55));
-    border-radius: 2px;
+    top: -10%;
+    background: linear-gradient(to bottom, transparent 0%, rgba(160,210,255,0.7) 100%);
+    border-radius: 0 0 2px 2px;
     animation: rain-fall linear infinite;
   }
   @keyframes rain-fall {
-    0% { top: -8%; opacity: 0; }
-    8% { opacity: 1; }
-    92% { opacity: 0.7; }
-    100% { top: 108%; opacity: 0; }
+    0%   { top: -10%; opacity: 0; }
+    6%   { opacity: 1; }
+    88%  { opacity: 0.65; }
+    100% { top: 110%; opacity: 0; }
+  }
+  .rain-splash {
+    position: absolute;
+    bottom: 0;
+    width: 6px; height: 2px;
+    border-radius: 50%;
+    background: rgba(160,210,255,0.5);
+    animation: splash linear infinite;
+    pointer-events: none;
+  }
+  @keyframes splash {
+    0%   { transform: scaleX(0.2) scaleY(1); opacity: 0; }
+    20%  { transform: scaleX(1.8) scaleY(0.4); opacity: 0.8; }
+    100% { transform: scaleX(2.5) scaleY(0.1); opacity: 0; }
   }
 
-  /* ── Snow flakes ── */
+  /* ══════════════════════════════════════
+     SNOW
+  ══════════════════════════════════════ */
   .snow-container {
     position: absolute; inset: 0; overflow: hidden; pointer-events: none;
   }
   .snow-flake {
     position: absolute;
-    top: -5%;
+    top: -6%;
     border-radius: 50%;
-    background: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.9);
     animation: snow-fall linear infinite;
-    filter: blur(0.5px);
+    filter: blur(0.4px);
+    box-shadow: 0 0 4px rgba(255,255,255,0.6);
   }
   @keyframes snow-fall {
-    0% { top: -5%; transform: translateX(0) rotate(0deg); opacity: 0; }
-    8% { opacity: 0.9; }
-    90% { opacity: 0.7; }
-    100% { top: 108%; transform: translateX(60px) rotate(360deg); opacity: 0; }
+    0%   { top: -6%; transform: translateX(0) rotate(0deg); opacity: 0; }
+    6%   { opacity: 0.95; }
+    88%  { opacity: 0.8; }
+    100% { top: 110%; transform: translateX(var(--drift, 50px)) rotate(360deg); opacity: 0; }
   }
 
-  /* ── Lightning (storm) ── */
+  /* ══════════════════════════════════════
+     LIGHTNING / STORM
+  ══════════════════════════════════════ */
   .lightning-flash {
     position: absolute; inset: 0;
-    background: rgba(200,220,255,0.08);
     opacity: 0;
-    animation: lightning-strike 9s ease infinite;
+    animation: lightning-strike var(--ls-dur, 9s) ease infinite var(--ls-delay, 0s);
     pointer-events: none;
   }
   @keyframes lightning-strike {
-    0%, 87%, 92%, 96%, 100% { opacity: 0; }
-    88%, 90% { opacity: 1; background: rgba(200,220,255,0.18); }
-    93%, 95% { opacity: 0.6; background: rgba(200,220,255,0.1); }
+    0%,84%,91%,94%,100% { opacity: 0; background: transparent; }
+    85%,88% { opacity: 1; background: rgba(200,225,255,0.22); }
+    92%,93%  { opacity: 0.5; background: rgba(200,225,255,0.1); }
   }
   .lightning-bolt {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
     opacity: 0;
-    animation: bolt-flash 9s ease infinite;
+    animation: bolt-flash var(--ls-dur, 9s) ease infinite var(--ls-delay, 0s);
     pointer-events: none;
   }
   @keyframes bolt-flash {
-    0%, 86%, 91%, 100% { opacity: 0; }
-    87%, 89% { opacity: 1; }
+    0%,83%,89%,100% { opacity: 0; }
+    84%,87% { opacity: 1; }
   }
 
-  /* ── Fog particles ── */
+  /* ══════════════════════════════════════
+     FOG
+  ══════════════════════════════════════ */
   .fog-layer {
-    position: absolute; left: -10%; width: 120%; height: 40%;
-    background: linear-gradient(90deg, transparent, rgba(200,215,225,0.12) 30%, rgba(220,230,235,0.18) 60%, transparent);
-    filter: blur(25px);
+    position: absolute; left: -15%; width: 130%;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(210,220,230,0.15) 25%,
+      rgba(225,232,238,0.22) 55%,
+      rgba(210,220,230,0.15) 75%,
+      transparent 100%);
+    filter: blur(30px);
     border-radius: 50%;
-    animation: fog-drift linear infinite;
+    animation: fog-drift ease-in-out infinite;
     pointer-events: none;
   }
   @keyframes fog-drift {
-    0% { transform: translateX(-15%); opacity: 0.4; }
-    50% { opacity: 0.8; }
-    100% { transform: translateX(15%); opacity: 0.4; }
+    0%   { transform: translateX(-18%) scaleY(1); opacity: 0.35; }
+    50%  { transform: translateX(0%) scaleY(1.15); opacity: 0.75; }
+    100% { transform: translateX(18%) scaleY(1); opacity: 0.35; }
   }
 </style>
 </head>
@@ -1344,6 +1427,7 @@ function buildWindySection() {
             <div class="windy-loader-text">Se încarcă harta radar…</div>
           </div>
           <iframe
+            id="ventuskyFrame"
             src="https://embed.ventusky.com/?p=${LAT};${LON};7&l=radar"
             allowfullscreen
             onload="onRadarLoad()"
@@ -1357,6 +1441,29 @@ function buildWindySection() {
 function onRadarLoad() {
   const loader = document.getElementById('windyLoader');
   if (loader) { loader.classList.add('hidden'); setTimeout(() => loader.remove(), 400); }
+}
+
+function updateVentuskyMap() {
+  const frame = document.getElementById('ventuskyFrame');
+  if (!frame) return;
+  const newSrc = `https://embed.ventusky.com/?p=${LAT};${LON};7&l=radar`;
+  if (frame.src !== newSrc) {
+    // Arătăm loader-ul din nou cât se reîncarcă harta
+    const wrap = frame.parentElement;
+    let loader = document.getElementById('windyLoader');
+    if (!loader) {
+      loader = document.createElement('div');
+      loader.id = 'windyLoader';
+      loader.className = 'windy-loader';
+      loader.innerHTML = `<div class="spinner" style="border-top-color:var(--teal)"></div><div class="windy-loader-text">Se actualizează harta…</div>`;
+      wrap.insertBefore(loader, frame);
+    } else {
+      loader.classList.remove('hidden');
+      loader.querySelector('.windy-loader-text').textContent = 'Se actualizează harta…';
+    }
+    frame.onload = onRadarLoad;
+    frame.src = newSrc;
+  }
 }
 
 // ── Charts ──
@@ -1514,6 +1621,7 @@ function render(data) {
       <div class="now-temp">
         <div class="current-temp">${Math.round(cw.temperature)}°<span style="font-size:52px; vertical-align:middle; margin-left:8px; -webkit-text-fill-color: initial">${iconForTime(cw.weathercode||d.weathercode[0], cw.is_day ?? 1)}</span></div>
         <div class="current-cond">${desc(cw.weathercode||d.weathercode[0])}</div>
+        ${(()=>{ const sums=getRemainingPrecipPerDay(data); const total=+sums.reduce((a,b)=>a+b,0).toFixed(1); return total>0?`<div class="current-rain-remain">💧 ${total} mm ploaie în următoarele 10 zile</div>`:`<div class="current-rain-remain" style="opacity:0.5">☀️ Fără ploaie în 10 zile</div>`; })()}
       </div>
     </div>
 
@@ -1603,14 +1711,24 @@ function getWeatherBgClass(code, isDay) {
   return 'bg-overcast';
 }
 
-function buildRain(count) {
+function buildRain(count, angle = 12) {
   let html = '<div class="rain-container">';
+  // picături principale — variate în lățime, lungime, opacitate, viteză
   for (let i = 0; i < count; i++) {
-    const left = Math.random() * 100;
-    const dur  = 0.5 + Math.random() * 0.8;
-    const delay = Math.random() * 2;
-    const h    = 60 + Math.random() * 80;
-    html += `<div class="rain-drop" style="left:${left}%;height:${h}px;animation-duration:${dur}s;animation-delay:-${delay}s;opacity:${0.3+Math.random()*0.5}"></div>`;
+    const left  = Math.random() * 110 - 5;
+    const dur   = 0.45 + Math.random() * 0.7;
+    const delay = -(Math.random() * 3);
+    const h     = 55 + Math.random() * 90;
+    const w     = 1 + Math.random() * 1.2;
+    const op    = 0.35 + Math.random() * 0.55;
+    html += `<div class="rain-drop" style="left:${left}%;height:${h}px;width:${w}px;animation-duration:${dur}s;animation-delay:${delay}s;opacity:${op};transform:rotate(${angle}deg);transform-origin:top center"></div>`;
+  }
+  // splash-uri la baza ecranului
+  for (let i = 0; i < Math.floor(count * 0.3); i++) {
+    const left  = Math.random() * 100;
+    const dur   = 0.5 + Math.random() * 0.6;
+    const delay = -(Math.random() * 2);
+    html += `<div class="rain-splash" style="left:${left}%;animation-duration:${dur}s;animation-delay:${delay}s"></div>`;
   }
   return html + '</div>';
 }
@@ -1618,11 +1736,13 @@ function buildRain(count) {
 function buildSnow(count) {
   let html = '<div class="snow-container">';
   for (let i = 0; i < count; i++) {
-    const left = Math.random() * 100;
-    const dur  = 4 + Math.random() * 6;
-    const delay = Math.random() * 8;
-    const sz   = 3 + Math.random() * 5;
-    html += `<div class="snow-flake" style="left:${left}%;width:${sz}px;height:${sz}px;animation-duration:${dur}s;animation-delay:-${delay}s"></div>`;
+    const left  = Math.random() * 100;
+    const dur   = 5 + Math.random() * 9;
+    const delay = -(Math.random() * 12);
+    const sz    = 2 + Math.random() * 6;
+    const drift = (Math.random() - 0.5) * 120;
+    const blur  = sz > 5 ? 1 : 0.3;
+    html += `<div class="snow-flake" style="left:${left}%;width:${sz}px;height:${sz}px;animation-duration:${dur}s;animation-delay:${delay}s;--drift:${drift}px;filter:blur(${blur}px);opacity:${0.6+Math.random()*0.4}"></div>`;
   }
   return html + '</div>';
 }
@@ -1630,11 +1750,14 @@ function buildSnow(count) {
 function buildClouds(color, count) {
   let html = '';
   for (let i = 0; i < count; i++) {
-    const top  = 5 + Math.random() * 35;
-    const sz   = 180 + Math.random() * 260;
-    const dur  = 60 + Math.random() * 80;
-    const delay = Math.random() * -80;
-    html += `<div class="cloud" style="top:${top}%;width:${sz}px;height:${sz*0.6}px;background:${color};animation-duration:${dur}s;animation-delay:${delay}s"></div>`;
+    const top   = 2 + Math.random() * 40;
+    const sz    = 200 + Math.random() * 320;
+    const dur   = 55 + Math.random() * 90;
+    const delay = -(Math.random() * 90);
+    const vert  = (Math.random() - 0.5) * 12;
+    // fiecare nor are câteva straturi pentru volum
+    html += `<div class="cloud" style="top:${top}%;width:${sz}px;height:${sz*0.55}px;background:${color};animation-duration:${dur}s;animation-delay:${delay}s;opacity:${0.28+Math.random()*0.3}"></div>`;
+    html += `<div class="cloud" style="top:${top+4}%;width:${sz*0.65}px;height:${sz*0.38}px;background:${color};animation-duration:${dur*0.85}s;animation-delay:${delay-8}s;opacity:${0.18+Math.random()*0.2}"></div>`;
   }
   return html;
 }
@@ -1642,12 +1765,23 @@ function buildClouds(color, count) {
 function buildStars(count) {
   let html = '';
   for (let i = 0; i < count; i++) {
-    const top  = Math.random() * 70;
-    const left = Math.random() * 100;
-    const dur  = 2 + Math.random() * 4;
-    const delay = Math.random() * -4;
-    const sz   = Math.random() < 0.2 ? 3 : 2;
-    html += `<div class="star" style="top:${top}%;left:${left}%;width:${sz}px;height:${sz}px;animation-duration:${dur}s;animation-delay:${delay}s"></div>`;
+    const top   = Math.random() * 75;
+    const left  = Math.random() * 100;
+    const dur   = 1.5 + Math.random() * 5;
+    const delay = -(Math.random() * 5);
+    const r     = Math.random();
+    const sz    = r < 0.08 ? 4 : r < 0.25 ? 3 : r < 0.55 ? 2 : 1.5;
+    const glow  = sz >= 3 ? `box-shadow:0 0 ${sz*3}px rgba(220,235,255,0.8)` : '';
+    html += `<div class="star" style="top:${top}%;left:${left}%;width:${sz}px;height:${sz}px;animation-duration:${dur}s;animation-delay:${delay}s;${glow}"></div>`;
+  }
+  // 2 shooting stars cu timing aleatoriu
+  for (let i = 0; i < 2; i++) {
+    const top   = 5 + Math.random() * 35;
+    const left  = 10 + Math.random() * 60;
+    const dur   = 1.2 + Math.random() * 1;
+    const delay = 3 + Math.random() * 18;
+    const rot   = 20 + Math.random() * 30;
+    html += `<div class="shooting-star" style="top:${top}%;left:${left}%;transform:rotate(${rot}deg);animation-duration:${dur}s;animation-delay:${delay}s;animation-iteration-count:infinite"></div>`;
   }
   return html;
 }
@@ -1674,39 +1808,49 @@ function updateWeatherBg(code, isDay) {
 
   if (cls === 'bg-sunny') {
     if (isDay) {
-      inner = '<div class="sun-rays"></div><div class="sun-orb"></div>'
-             + buildClouds('rgba(255,255,255,0.55)', 2);
+      inner = '<div class="sun-ray"></div><div class="sun-corona"></div><div class="sun-orb"></div><div class="heat-shimmer"></div>'
+             + buildClouds('rgba(255,255,255,0.5)', 2);
     } else {
-      inner = '<div class="moon-orb"></div>' + buildStars(80);
+      inner = '<div class="moon-halo"></div><div class="moon-orb"></div>' + buildStars(100);
     }
   } else if (cls === 'bg-partly-cloudy') {
     if (isDay) {
-      inner = '<div class="sun-orb" style="opacity:0.5;width:130px;height:130px;top:60px"></div>'
-             + buildClouds('rgba(255,255,255,0.6)', 5);
+      inner = '<div class="sun-corona" style="opacity:0.6;width:250px;height:250px;top:-10px"></div>'
+             + '<div class="sun-orb" style="opacity:0.55;width:140px;height:140px;top:55px"></div>'
+             + buildClouds('rgba(255,255,255,0.58)', 5);
     } else {
-      inner = '<div class="moon-orb" style="opacity:0.5"></div>'
-             + buildStars(40)
-             + buildClouds('rgba(80,100,140,0.5)', 4);
+      inner = '<div class="moon-halo" style="opacity:0.5"></div>'
+             + '<div class="moon-orb" style="opacity:0.55;width:80px;height:80px"></div>'
+             + buildStars(50)
+             + buildClouds('rgba(70,95,140,0.5)', 4);
     }
   } else if (cls === 'bg-overcast') {
-    inner = buildClouds('rgba(120,140,160,0.55)', 7);
+    inner = buildClouds('rgba(110,130,155,0.6)', 8);
   } else if (cls === 'bg-fog') {
-    for (let i = 0; i < 5; i++) {
-      const top = 10 + i * 18;
-      const dur = 18 + i * 7;
-      const delay = i * -5;
-      inner += `<div class="fog-layer" style="top:${top}%;animation-duration:${dur}s;animation-delay:${delay}s;animation-direction:${i%2?'reverse':'normal'}"></div>`;
+    for (let i = 0; i < 6; i++) {
+      const top = 5 + i * 16;
+      const h   = 20 + Math.random() * 20;
+      const dur = 20 + i * 6;
+      const delay = i * -6;
+      inner += `<div class="fog-layer" style="top:${top}%;height:${h}%;animation-duration:${dur}s;animation-delay:${delay}s;animation-direction:${i%2?'reverse':'normal'}"></div>`;
     }
   } else if (cls === 'bg-rain') {
-    inner = buildClouds('rgba(60,80,110,0.7)', 6) + buildRain(80);
+    inner = buildClouds('rgba(50,70,100,0.65)', 6) + buildRain(90, 10);
   } else if (cls === 'bg-snow') {
-    inner = buildClouds('rgba(160,180,200,0.5)', 5) + buildSnow(60);
+    inner = buildClouds('rgba(155,175,200,0.5)', 5) + buildSnow(70);
   } else if (cls === 'bg-storm') {
-    inner = buildClouds('rgba(30,40,60,0.8)', 8)
-           + buildRain(100)
-           + '<div class="lightning-flash"></div>'
-           + `<svg class="lightning-bolt" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg">
-               <polyline points="220,0 180,240 230,240 160,480" fill="none" stroke="rgba(200,220,255,0.9)" stroke-width="3" stroke-linejoin="round"/>
+    inner = buildClouds('rgba(25,35,55,0.85)', 9)
+           + buildRain(110, 18)
+           // două fulgere cu timing diferit
+           + `<div class="lightning-flash" style="--ls-dur:8s;--ls-delay:0s"></div>`
+           + `<div class="lightning-flash" style="--ls-dur:11s;--ls-delay:4s"></div>`
+           + `<svg class="lightning-bolt" style="--ls-dur:8s;--ls-delay:0s" viewBox="0 0 400 700" xmlns="http://www.w3.org/2000/svg">
+               <polyline points="230,0 185,250 240,250 165,520" fill="none" stroke="rgba(210,230,255,0.95)" stroke-width="3" stroke-linejoin="round"/>
+               <polyline points="230,0 185,250 240,250 165,520" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="7" stroke-linejoin="round" filter="url(#glow)"/>
+               <defs><filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+             </svg>`
+           + `<svg class="lightning-bolt" style="--ls-dur:11s;--ls-delay:4s" viewBox="0 0 400 700" xmlns="http://www.w3.org/2000/svg">
+               <polyline points="140,0 100,200 155,200 80,440" fill="none" stroke="rgba(200,220,255,0.8)" stroke-width="2.5" stroke-linejoin="round"/>
              </svg>`;
   }
   bg.innerHTML = inner;
