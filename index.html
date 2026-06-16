@@ -44,7 +44,7 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-data);
-    min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
   }
 
@@ -1259,18 +1259,58 @@
   /* Light theme */
   body.light {
     --bg: #eef2f8; --bg2: #e4e9f2; --bg3: #dde3ee;
-    --card: rgba(0,0,0,0.035); --card-hover: rgba(0,0,0,0.06);
+    --card: rgba(255,255,255,0.72); --card-hover: rgba(255,255,255,0.88);
     --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.15);
     --text: #1a2035; --text2: rgba(26,32,53,0.62); --text3: rgba(26,32,53,0.45);
     --bg-suggestions: #ffffff; --bg-suggestions-hover: rgba(91,156,246,0.08);
   }
-  body.light #weather-bg::after { background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.45) 100%); }
+  body.light #weather-bg::after { background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.78) 100%); }
   body.light .current-temp { background: linear-gradient(135deg, #1a2035, #b07500); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 
   @media (prefers-reduced-motion: reduce) {
     #weather-bg * { animation: none !important; }
   }
   body.reduce-motion #weather-bg * { animation: none !important; }
+  body.high-contrast #weather-bg { opacity: 0.45; }
+  body.high-contrast #weather-bg::after { background: linear-gradient(180deg, rgba(5,8,22,0.72) 0%, rgba(5,8,22,0.88) 100%) !important; }
+  body.high-contrast.light #weather-bg { opacity: 0.35; }
+
+
+
+  /* ── Readability / Android fixes v2.1 ── */
+  html { height: 100%; overflow-x: hidden; }
+  body {
+    overflow-x: hidden;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #weather-bg { height: 100dvh; }
+  .app { padding-bottom: max(80px, env(safe-area-inset-bottom)); }
+
+  /* Hide scrollbars that flash on Android */
+  .hourly-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overscroll-behavior-x: contain;
+  }
+  .hourly-scroll::-webkit-scrollbar { display: none; width:0; height:0; }
+
+  /* Stronger text contrast on bright backgrounds */
+  .current-temp, .location-name, .section-title {
+    text-shadow: 0 2px 18px rgba(0,0,0,0.35);
+  }
+  body.light .current-temp,
+  body.light .location-name,
+  body.light .section-title {
+    text-shadow: 0 1px 12px rgba(255,255,255,0.6);
+  }
+  /* Cards a bit more opaque by default */
+  :root {
+    --card: rgba(10,14,35,0.38);
+  }
+  body.light {
+    --card: rgba(255,255,255,0.78);
+  }
 
 </style>
 </head>
@@ -1286,6 +1326,7 @@
     <div class="search-inner">
       <div class="top-bar">
         <button class="theme-btn" id="themeBtn" title="Temă">🌓</button>
+        <button class="theme-btn" id="clarityBtn" title="Claritate fundal">👁️</button>
       </div>
       <span class="search-icon">🔍</span>
       <input
@@ -2650,6 +2691,17 @@ document.addEventListener('mousemove', e=>{
 
 // init favorites row on first load
 document.addEventListener('DOMContentLoaded', ()=>{ setTimeout(renderFavorites, 100); });
+
+
+// Claritate toggle - reduce background intensity
+document.addEventListener('click', e=>{
+  if (e.target.closest('#clarityBtn')){
+    document.body.classList.toggle('high-contrast');
+    localStorage.setItem('vremea_clarity', document.body.classList.contains('high-contrast') ? '1' : '0');
+  }
+});
+// restore
+if (localStorage.getItem('vremea_clarity') === '1') document.body.classList.add('high-contrast');
 
 // ── Boot ──
 loadWeather();
