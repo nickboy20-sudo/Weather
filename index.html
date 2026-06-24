@@ -2,7 +2,7 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Vreme • v3</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -25,10 +25,13 @@ html{background:var(--bg1)}
 body{
   font-family:'Inter',sans-serif;
   min-height:100vh;
+  min-height:100dvh;
   background:var(--bg1);
   color:var(--text);
   overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior-y:contain;
 }
 
 /* BACKGROUNDS */
@@ -55,7 +58,11 @@ body.weather-fog-night #bg{background:linear-gradient(160deg,#1c2228 0%,#2c3440 
 @keyframes drift{0%{transform:translateX(-60px);opacity:0}20%{opacity:.55}80%{opacity:.55}100%{transform:translateX(110vw);opacity:0}}
 
 /* LAYOUT */
-#app{position:relative;z-index:2;min-height:100vh;max-width:1120px;margin:0 auto;padding:28px 24px 64px}
+#app{position:relative;z-index:2;min-height:100vh;max-width:1120px;margin:0 auto;padding:28px 24px 64px;padding-bottom:max(64px, calc(64px + env(safe-area-inset-bottom)))}
+
+/* Horizontal scrolls - smooth on iOS */
+.hourly-scroll,.two-col-scroll{-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory}
+.hour-card{scroll-snap-align:start}
 
 /* SEARCH */
 .search-wrap{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
@@ -234,17 +241,138 @@ body.minimal .minimal-hint{opacity:1}
   .span-2{grid-column:1 / -1}
 }
 
-/* MOBILE */
-@media(max-width:640px){
-  #app{padding:16px 14px 48px}
-  .main-card{padding:20px}
-  .weather-icon-main{width:84px;height:84px}
-  .temp-val{font-size:56px}
-  .stats-row{grid-template-columns:repeat(2,1fr)}
-  .search-box{flex-basis:100%}
-  .btn-icon{width:44px;height:44px}
-  .day-desc{display:none}
+/* ===== TABLET (max 768px) ===== */
+@media(max-width:768px){
+  #app{padding:18px 16px 56px}
+  .card{padding:20px;border-radius:18px;margin-bottom:14px}
+  .main-card{padding:22px}
+  .stats-row{grid-template-columns:repeat(3,1fr);gap:10px}
+  .day-name{width:72px;font-size:13px}
+  .two-col{display:block}
+  .two-col > .card{margin-bottom:14px}
+  .week-summary{grid-template-columns:repeat(2,1fr)}
   .activities-grid{grid-template-columns:1fr 1fr}
+}
+
+/* ===== MOBILE (max 480px) ===== */
+@media(max-width:480px){
+  #app{padding:12px 12px 72px}
+
+  /* Search */
+  .search-wrap{gap:8px;flex-wrap:wrap}
+  .search-box{flex-basis:100%;order:-1;min-width:0}
+  .search-box input{padding:13px 18px;font-size:16px} /* 16px prevents iOS zoom */
+  .btn-icon{width:44px;height:44px;flex-shrink:0}
+
+  /* Quick locations - horizontal scroll */
+  #quick-locations{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none;gap:7px;margin-bottom:12px}
+  #quick-locations::-webkit-scrollbar{display:none}
+  .btn-quick{flex-shrink:0;font-size:12px;padding:6px 12px}
+
+  /* Main card */
+  .main-card{padding:18px 16px;border-radius:20px}
+  .city-name{font-size:clamp(22px,7vw,30px)}
+  .weather-main{gap:8px;margin-top:12px}
+  .temp-val{font-size:clamp(52px,17vw,72px);letter-spacing:-2px}
+  .temp-unit{font-size:22px;margin-top:8px}
+  .weather-icon-main{width:80px;height:80px;flex-shrink:0}
+  .weather-desc{font-size:14px}
+  .feel{font-size:12px}
+
+  /* Stats grid — 2 columns on mobile */
+  .stats-row{grid-template-columns:repeat(2,1fr);gap:9px;margin-top:16px}
+  .stat{padding:11px 10px;border-radius:13px}
+  .stat-label{font-size:10px;letter-spacing:.3px}
+  .stat-val{font-size:15px;margin-top:2px}
+
+  /* Cards */
+  .card{padding:16px 15px;border-radius:17px;margin-bottom:12px}
+  .section-title{font-size:10px;letter-spacing:1.2px;margin-bottom:10px}
+
+  /* Hourly scroll */
+  .hourly-scroll{gap:8px;padding-bottom:8px}
+  .hour-card{width:66px;padding:9px 6px;border-radius:13px}
+  .hour-time{font-size:10px}
+  .hour-icon{width:28px;height:28px;margin:4px auto}
+  .hour-temp{font-size:14px;font-weight:600}
+  .hour-rain{font-size:9.5px}
+
+  /* 10-day forecast */
+  .day-row{padding:9px 0;gap:8px;flex-wrap:nowrap}
+  .day-name{width:62px;font-size:12.5px;flex-shrink:0}
+  .day-icon{width:24px;height:24px;flex-shrink:0}
+  .day-desc{display:none} /* too narrow, hide description */
+  .day-rain{font-size:11px;width:36px}
+  .day-min{font-size:12px}
+  .day-max{font-size:13px;font-weight:600}
+
+  /* Wind card */
+  .wind-top{gap:16px;flex-wrap:nowrap}
+  .compass-ring{width:80px;height:80px;flex-shrink:0}
+  .compass-arrow{height:30px}
+  .wind-speed-big{font-size:30px}
+  .wind-label{font-size:10px}
+  .wind-stat-row{font-size:12px;padding:4px 0}
+
+  /* AQI */
+  .aqi-badge{width:60px;height:60px}
+  .aqi-badge .aqi-num{font-size:20px}
+  .aqi-desc-title{font-size:14px}
+  .aqi-desc-sub{font-size:12px}
+  .aqi-pollutants{grid-template-columns:repeat(3,1fr);gap:8px}
+  .aqi-pollutant{padding:8px 6px}
+  .aqi-pollutant-name{font-size:10px}
+  .aqi-pollutant-val{font-size:13px}
+
+  /* Alerts */
+  .alert-item{padding:10px 12px;font-size:12.5px;border-radius:13px}
+  .alert-text b{font-size:13px}
+  .alert-text span{font-size:12px}
+
+  /* Sun arc */
+  .sun-arc-wrap{max-width:100%}
+
+  /* Outfit chips */
+  .outfit-chip{font-size:12px;padding:7px 11px}
+
+  /* Activities */
+  .activities-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .activity{padding:10px}
+  .activity-name{font-size:12px}
+
+  /* Weekly summary */
+  .week-summary{grid-template-columns:1fr 1fr;gap:8px}
+  .week-stat{padding:10px 11px;border-radius:12px}
+  .week-stat-val{font-size:15px}
+
+  /* Moon phase */
+  .moon-svg{width:48px;height:48px}
+
+  /* Charts height reduced */
+  .chart-wrap{height:150px}
+
+  /* Rain 10d chart */
+  #rain10d-card .chart-wrap{height:160px}
+
+  /* Toast position */
+  .toast{bottom:80px;font-size:12px;padding:10px 16px}
+
+  /* PTR */
+  #ptr-indicator{width:40px;height:40px;font-size:18px}
+}
+
+/* ===== VERY SMALL (max 360px) ===== */
+@media(max-width:360px){
+  #app{padding:10px 10px 64px}
+  .stats-row{grid-template-columns:repeat(2,1fr);gap:7px}
+  .stat{padding:9px 8px}
+  .stat-val{font-size:14px}
+  .temp-val{font-size:52px}
+  .weather-icon-main{width:70px;height:70px}
+  .hour-card{width:60px}
+  .aqi-pollutants{grid-template-columns:repeat(2,1fr)}
+  .week-summary{grid-template-columns:1fr 1fr;gap:7px}
+  .card{padding:14px 13px}
 }
 
 /* LOADING */
