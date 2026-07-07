@@ -442,6 +442,78 @@
     .precip-bar-wrap { width: 100%; }
   }
 
+  /* ── Week Summary Card ── */
+  .week-summary-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--r2);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    padding: 22px 24px 20px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.6s 0.2s ease both;
+    position: relative; overflow: hidden;
+  }
+  .week-summary-card::before {
+    content: '';
+    position: absolute; top: -40px; left: -40px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(245,200,66,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .week-summary-title {
+    font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--text3); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .week-summary-title::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+  }
+  .week-summary-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .week-summary-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 14px 16px;
+    position: relative;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .week-summary-item:hover {
+    background: var(--card-hover);
+    border-color: var(--border2);
+  }
+  .week-summary-label {
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text2); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .week-summary-label .wsi-icon { font-size: 13px; }
+  .week-summary-value {
+    font-family: var(--font-mono);
+    font-size: 24px; font-weight: 400; color: var(--text);
+    line-height: 1.1; margin-bottom: 6px;
+  }
+  .week-summary-value.hot { color: var(--gold); }
+  .week-summary-value.cold { color: var(--blue); }
+  .week-summary-value.rain { color: var(--rain); }
+  .week-summary-value.chance { color: var(--teal); }
+  .week-summary-day {
+    font-size: 12px; color: var(--text3);
+  }
+  @media (max-width: 700px) {
+    .week-summary-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 420px) {
+    .week-summary-card { padding: 18px 16px; }
+    .week-summary-value { font-size: 21px; }
+  }
+
   /* ── Charts ── */
   .charts-row {
     display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;
@@ -1732,7 +1804,7 @@ async function fetchWeather() {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${state.lat}&longitude=${state.lon}` +
     `&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weathercode,is_day,windspeed_10m,winddirection_10m,windgusts_10m,pressure_msl,uv_index` +
     `&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weathercode,windspeed_10m,winddirection_10m,windgusts_10m,uv_index,visibility,pressure_msl` +
-    `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset,precipitation_hours,windspeed_10m_max,uv_index_max` +
+    `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunrise,sunset,precipitation_hours,windspeed_10m_max,uv_index_max` +
     `&timezone=${encodeURIComponent(state.tz)}&forecast_days=10&timeformat=iso8601`;
   const r = await fetch(url);
   if (!r.ok) throw new Error('API error');
@@ -1995,6 +2067,45 @@ function buildPrecipTotalCard(data) {
           <div class="precip-bar-fill" id="precipBarFill" style="width:0%"></div>
         </div>
         <div class="precip-bar-label">${pct}% dintr-o perioadă ploioasă intensă (100mm)</div>
+      </div>
+    </div>`;
+}
+
+function buildWeekSummaryCard(data) {
+  const d = data.daily;
+  const n = d.time.length;
+  const dayLabel = (i) => i === 0 ? 'azi' : shortDay(d.time[i]);
+
+  let hotIdx = 0, coldIdx = 0, rainIdx = 0, chanceIdx = 0;
+  for (let i = 1; i < n; i++) {
+    if (d.temperature_2m_max[i] > d.temperature_2m_max[hotIdx]) hotIdx = i;
+    if (d.temperature_2m_min[i] < d.temperature_2m_min[coldIdx]) coldIdx = i;
+    if ((d.precipitation_sum[i] || 0) > (d.precipitation_sum[rainIdx] || 0)) rainIdx = i;
+    if ((d.precipitation_probability_max?.[i] || 0) > (d.precipitation_probability_max?.[chanceIdx] || 0)) chanceIdx = i;
+  }
+
+  const rainMax = +(d.precipitation_sum[rainIdx] || 0).toFixed(1);
+  const chanceMax = d.precipitation_probability_max ? Math.round(d.precipitation_probability_max[chanceIdx] || 0) : null;
+
+  const items = [
+    { icon: '☀️', label: 'Cel mai cald', value: `${Math.round(d.temperature_2m_max[hotIdx])}°C`, cls: 'hot', day: dayLabel(hotIdx) },
+    { icon: '❄️', label: 'Cel mai frig', value: `${Math.round(d.temperature_2m_min[coldIdx])}°C`, cls: 'cold', day: dayLabel(coldIdx) },
+    { icon: '🌧️', label: 'Cea mai ploioasă', value: `${rainMax} mm`, cls: 'rain', day: dayLabel(rainIdx) },
+  ];
+  if (chanceMax !== null) {
+    items.push({ icon: '💧', label: 'Max. șanse ploaie', value: `${chanceMax}%`, cls: 'chance', day: dayLabel(chanceIdx) });
+  }
+
+  return `
+    <div class="week-summary-card">
+      <div class="week-summary-title">Rezumat săptămână</div>
+      <div class="week-summary-grid">
+        ${items.map(it => `
+          <div class="week-summary-item">
+            <div class="week-summary-label"><span class="wsi-icon">${it.icon}</span>${it.label}</div>
+            <div class="week-summary-value ${it.cls}">${it.value}</div>
+            <div class="week-summary-day">${it.day}</div>
+          </div>`).join('')}
       </div>
     </div>`;
 }
@@ -2295,6 +2406,8 @@ function render(data) {
     <div class="section-label">Prognoză orară</div>
     ${bestHtml}
     <div class="hourly-scroll" id="hourlyScroll">${buildHourlyRow(todayHours)}</div>
+
+    ${buildWeekSummaryCard(data)}
 
     <div class="section-label">Prognoză 10 zile</div>
     <div class="days-grid">${buildDayCards(data)}</div>
