@@ -746,15 +746,67 @@
 
   #weather-bg {
     position: fixed; inset: 0; z-index: 0;
-    transition: background 2.5s ease;
+    transition: background 2.5s ease, transform 0.6s cubic-bezier(.16,.84,.44,1);
     overflow: hidden;
+    transform: translate(0,0) scale(1.05);
+    will-change: transform;
   }
   #weather-bg::after {
     content: '';
     position: absolute; inset: 0; z-index: 2;
-    background: linear-gradient(180deg, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.62) 100%);
+    background:
+      radial-gradient(ellipse at 50% 28%, transparent 0%, rgba(0,0,0,0.14) 65%, rgba(0,0,0,0.46) 100%),
+      linear-gradient(180deg, rgba(0,0,0,0.34) 0%, rgba(0,0,0,0.6) 100%);
     pointer-events: none;
   }
+  /* Warm color-grade wash for sunrise/sunset — toggled via .golden class */
+  #weather-bg::before {
+    content: '';
+    position: absolute; inset: 0; z-index: 1;
+    background: linear-gradient(180deg, rgba(255,150,60,0.32) 0%, rgba(255,95,80,0.16) 32%, transparent 62%);
+    opacity: 0;
+    transition: opacity 3s ease;
+    pointer-events: none;
+  }
+  #weather-bg.golden::before { opacity: 1; }
+  #weather-bg.golden.dusk::before {
+    background: linear-gradient(180deg, rgba(255,120,70,0.36) 0%, rgba(170,70,130,0.2) 34%, transparent 65%);
+  }
+
+  /* Living sky — very slow gradient drift for a breathing, immersive feel.
+     Only enabled on capable devices (see PERF.fancy in JS) since animating
+     background-position repaints rather than just compositing. */
+  body.bg-drift #weather-bg.bg-sunny, body.bg-drift #weather-bg.bg-sunny.night,
+  body.bg-drift #weather-bg.bg-partly-cloudy, body.bg-drift #weather-bg.bg-partly-cloudy.night,
+  body.bg-drift #weather-bg.bg-overcast, body.bg-drift #weather-bg.bg-overcast.night,
+  body.bg-drift #weather-bg.bg-fog, body.bg-drift #weather-bg.bg-fog.night,
+  body.bg-drift #weather-bg.bg-snow, body.bg-drift #weather-bg.bg-snow.night,
+  body.bg-drift #weather-bg.bg-rain, body.bg-drift #weather-bg.bg-rain.night {
+    background-size: 145% 145%;
+    animation: sky-drift 55s ease-in-out infinite alternate;
+  }
+  @keyframes sky-drift {
+    0%   { background-position: 25% 10%; }
+    50%  { background-position: 60% 40%; }
+    100% { background-position: 40% 0%; }
+  }
+
+  .aurora-ribbon {
+    position: absolute; top: -8%; left: -10%; width: 120%; height: 50%;
+    background: linear-gradient(115deg,
+      transparent 0%, rgba(70,225,175,0.16) 22%, rgba(110,190,255,0.18) 42%,
+      rgba(170,120,255,0.14) 62%, transparent 82%);
+    filter: blur(38px);
+    mix-blend-mode: screen;
+    animation: aurora-flow 16s ease-in-out infinite alternate;
+    pointer-events: none;
+  }
+  @keyframes aurora-flow {
+    0%   { transform: translateX(-6%) skewY(-2deg); opacity: 0.55; }
+    50%  { transform: translateX(6%) skewY(2deg);   opacity: 0.9; }
+    100% { transform: translateX(-3%) skewY(-1deg); opacity: 0.65; }
+  }
+
 
   /* ─────────────────────────────────────────
      1. SENIN ZI (cod 0, 1)
@@ -1444,9 +1496,11 @@
   body.light .current-temp { background: linear-gradient(135deg, #1a2035, #b07500); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 
   @media (prefers-reduced-motion: reduce) {
-    #weather-bg * { animation: none !important; }
+    #weather-bg, #weather-bg * { animation: none !important; transform: none !important; }
+    .aurora-ribbon { display: none; }
   }
-  body.reduce-motion #weather-bg * { animation: none !important; }
+  body.reduce-motion #weather-bg, body.reduce-motion #weather-bg * { animation: none !important; transform: none !important; }
+  body.reduce-motion .aurora-ribbon { display: none; }
   body.high-contrast #weather-bg { opacity: 0.45; }
   body.high-contrast #weather-bg::after { background: linear-gradient(180deg, rgba(5,8,22,0.72) 0%, rgba(5,8,22,0.88) 100%) !important; }
   body.high-contrast.light #weather-bg { opacity: 0.35; }
@@ -2355,7 +2409,7 @@ function render(data) {
   }
   const todayHours = getHourlyFromNow(data);
 
-  updateWeatherBg(cw.weathercode ?? d.weathercode[0], cw.is_day ?? 1);
+  updateWeatherBg(cw.weathercode ?? d.weathercode[0], cw.is_day ?? 1, d.sunrise?.[0], d.sunset?.[0]);
 
   // metrics
   const feels = cw.apparent ?? cw.temperature;
@@ -2524,18 +2578,41 @@ const PERF = (() => {
   const w = window.innerWidth || 1024;
   const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const lowCPU = (navigator.hardwareConcurrency || 8) <= 4;
+  const canHover = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   let scale = 1;
   if (w <= 400) scale = 0.35;
   else if (w <= 640) scale = 0.5;
   else if (w <= 900) scale = 0.75;
   if (lowCPU) scale *= 0.8;
-  return { scale, reducedMotion };
+  // "fancy" gates optional atmospheric flourishes (aurora, parallax) that add
+  // beauty but aren't essential — skip them on small/low-power/reduced-motion.
+  const fancy = !reducedMotion && scale >= 0.75;
+  return { scale, reducedMotion, canHover, fancy };
 })();
 // Scales a particle count down on constrained devices, keeping a sane floor.
 function pc(n) {
   if (PERF.reducedMotion) return Math.max(1, Math.round(n * 0.15));
   if (PERF.scale >= 1) return n;
   return Math.max(Math.min(n, 3), Math.round(n * PERF.scale));
+}
+
+// Enable the slow "living sky" drift only on devices that can afford the repaint cost.
+if (PERF.fancy) document.body.classList.add('bg-drift');
+
+// Subtle pointer parallax on the weather background for depth — desktop/mouse only.
+if (PERF.fancy && PERF.canHover) {
+  let rafPending = false, mx = 0, my = 0;
+  window.addEventListener('mousemove', (e) => {
+    mx = (e.clientX / window.innerWidth) - 0.5;
+    my = (e.clientY / window.innerHeight) - 0.5;
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => {
+      const bg = document.getElementById('weather-bg');
+      if (bg) bg.style.transform = `translate(${mx * -16}px, ${my * -12}px) scale(1.05)`;
+      rafPending = false;
+    });
+  }, { passive: true });
 }
 
 function getWeatherBgClass(code, isDay) {
@@ -2798,10 +2875,21 @@ function buildStormNight() {
   return html;
 }
 
-function updateWeatherBg(code, isDay) {
+function updateWeatherBg(code, isDay, sunrise, sunset) {
   const bg = document.getElementById('weather-bg');
   const cls = getWeatherBgClass(code, isDay);
-  bg.className = cls + (isDay ? '' : ' night');
+
+  // Golden hour: within ~35 min of sunrise (dawn) or sunset (dusk) — warm color wash.
+  let extraCls = isDay ? '' : ' night';
+  if (sunrise && sunset) {
+    const now = Date.now();
+    const riseT = new Date(sunrise).getTime();
+    const setT  = new Date(sunset).getTime();
+    const WINDOW = 35 * 60 * 1000;
+    if (!isNaN(riseT) && Math.abs(now - riseT) < WINDOW) extraCls += ' golden';
+    else if (!isNaN(setT) && Math.abs(now - setT) < WINDOW) extraCls += ' golden dusk';
+  }
+  bg.className = cls + extraCls;
 
   const bgMap = {
     'bg-sunny':         isDay ? '#0a2e8a' : '#03060f',
@@ -2819,7 +2907,11 @@ function updateWeatherBg(code, isDay) {
   let inner = '';
 
   if (cls === 'bg-sunny') {
-    inner = isDay ? buildSunDay() : ('<div class="moon-orb"></div><div class="moon-halo"></div>' + buildStars(pc(90)));
+    inner = isDay
+      ? buildSunDay()
+      : ('<div class="moon-orb"></div><div class="moon-halo"></div>'
+        + (PERF.fancy ? '<div class="aurora-ribbon"></div>' : '')
+        + buildStars(pc(90)));
   } else if (cls === 'bg-partly-cloudy') {
     inner = isDay ? buildPartlyCloudyDay() : buildPartlyCloudyNight();
   } else if (cls === 'bg-overcast') {
