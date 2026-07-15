@@ -1084,7 +1084,17 @@ function drawWindChart(hourData){
   hourData.forEach((h,i)=>{
     if(i%2!==0 && n>12) return;
     const x = xFor(i);
-    const label = i===0 ? 'Acum' : fmtTime(h.time);
+    let label;
+    if(i===0){ label = 'Acum'; }
+    else {
+      try{
+        const d = new Date(h.time);
+        label = String(d.getHours());
+      }catch(_){
+        const t = fmtTime(h.time);
+        label = t.includes(':') ? t.split(':')[0] : t;
+      }
+    }
     ctx.fillText(label, x, H - 8);
   });
 }
