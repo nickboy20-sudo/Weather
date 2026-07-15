@@ -122,12 +122,18 @@ body{
 .hourly-scroll{display:flex; gap:10px; overflow-x:auto; padding:16px 12px; scrollbar-width:thin;}
 .hourly-scroll::-webkit-scrollbar{height:6px;}
 .hourly-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.25); border-radius:10px;}
-.hour-item{flex:0 0 auto; width:70px; text-align:center; padding:10px 4px; border-radius:14px; background:rgba(255,255,255,0.07);}
+.hour-item{flex:0 0 auto; width:78px; text-align:center; padding:10px 6px; border-radius:14px; background:rgba(255,255,255,0.07); position:relative; transition:background .2s, border .2s;}
 .hour-item.now{background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.3);}
+.hour-item.has-rain{background:rgba(142,205,255,0.18); border:1px solid rgba(142,205,255,0.32);}
 .hour-item .h-time{font-size:12px; color:var(--text-dim);}
 .hour-item .h-icon{font-size:24px; margin:6px 0;}
 .hour-item .h-temp{font-size:14px; font-weight:600;}
-.hour-item .h-precip{font-size:10.5px; color:#8ecdff; margin-top:3px;}
+.hour-item .h-precip{font-size:10.5px; color:#8ecdff; margin-top:3px; line-height:1.25; min-height:26px; display:flex; flex-direction:column; align-items:center; gap:1px;}
+.hour-item .h-mm{font-size:11px; font-weight:700; color:#a8d8ff; background:rgba(142,205,255,0.18); padding:1px 5px; border-radius:8px; margin-top:1px;}
+.hour-item .h-pop{font-size:10px; opacity:.9;}
+.rain-chart-card{height:260px; margin-top:12px;}
+.rain-chart-card .chart-wrap{height:200px;}
+@media (max-width:520px){ .rain-chart-card{height:230px;} }
 .daily-list{display:flex; flex-direction:column; gap:8px; padding:6px 10px 16px;}
 .day-item{display:grid; grid-template-columns: 90px 32px 1fr 90px 46px; align-items:center; gap:10px; padding:12px 14px; border-radius:14px; background:rgba(255,255,255,0.07); font-size:14px;}
 .day-item.today{background:rgba(255,255,255,0.16);}
@@ -613,19 +619,32 @@ function render(data){
   }catch(e){ startIdx = 0; }
 
   const hourlyHTML = [];
+  const next6Data = []; // pentru graficul de ploaie
   for(let i=startIdx; i<startIdx+24 && i<hourly.time.length; i++){
     const h = {
-      time: hourly.time[i], temp: hourly.temperature_2m[i], pop: hourly.precipitation_probability[i],
+      time: hourly.time[i],
+      temp: hourly.temperature_2m[i],
+      pop: hourly.precipitation_probability[i],
+      precip: hourly.precipitation[i],
       code: hourly.weather_code[i]
     };
+    if(i < startIdx + 6) next6Data.push(h);
     const hi = wmoInfo(h.code);
-    hourlyHTML.push(`<div class="hour-item ${i===startIdx?'now':''}">
+    const hasRain = (h.precip!=null && h.precip>0.05) || (hi.grp==='rain' || hi.grp==='storm' || hi.grp==='snow');
+    const mmText = h.precip!=null && h.precip>=0.05 ? (h.precip>=1 ? h.precip.toFixed(1) : h.precip.toFixed(2)) + ' mm' : '';
+    const popText = h.pop!=null && h.pop>0 ? h.pop + '%' : '';
+    const classes = ['hour-item', i===startIdx?'now':'', hasRain?'has-rain':''].filter(Boolean).join(' ');
+    hourlyHTML.push(`<div class="${classes}">
       <div class="h-time">${i===startIdx?'Acum':fmtTime(h.time)}</div>
       <div class="h-icon">${hi.e}</div>
       <div class="h-temp">${Math.round(h.temp)}°</div>
-      <div class="h-precip">${h.pop>0?h.pop+'%':''}</div>
+      <div class="h-precip">
+        ${popText ? `<span class="h-pop">${popText}</span>` : `<span class="h-pop" style="opacity:.35">—</span>`}
+        ${mmText ? `<span class="h-mm">💧 ${mmText}</span>` : ''}
+      </div>
     </div>`);
   }
+  const hasRainNext6 = next6Data.some(h => h.precip!=null && h.precip>0.05);
 
   const globalMin = Math.min(...daily.temperature_2m_min);
   const globalMax = Math.max(...daily.temperature_2m_max);
@@ -680,6 +699,14 @@ function render(data){
     <div class="section-title">🕐 Prognoză orară — următoarele 24h</div>
     <div class="card"><div class="hourly-scroll">${hourlyHTML.join('')}</div></div>
 
+    ${hasRainNext6 ? `
+    <div class="section-title">🌧️ Ploaie în următoarele 6 ore — mm pe oră</div>
+    <div class="card chart-card rain-chart-card">
+      <div class="chart-head"><span>💧 Precipitații orare</span><span style="font-size:11px; opacity:.7">${next6Data.reduce((a,b)=>a+(b.precip||0),0).toFixed(1)} mm total</span></div>
+      <div class="chart-wrap"><canvas id="rainChart"></canvas></div>
+    </div>
+    ` : ''}
+
     <div class="section-title">📅 Prognoză pe 10 zile</div>
     <div class="card"><div class="daily-list">${dailyHTML}</div></div>
 
@@ -697,15 +724,22 @@ function render(data){
     </div>
   `;
 
-  // desenam graficul dupa ce DOM-ul e stabil
-  requestAnimationFrame(()=> drawChart(daily));
+  // desenam graficele dupa ce DOM-ul e stabil
+  requestAnimationFrame(()=> {
+    drawChart(daily);
+    if(hasRainNext6) drawRainChart(next6Data);
+  });
 }
 
 let _lastDaily = null;
+let _lastRain = null;
 let resizeTimer = null;
 window.addEventListener('resize', ()=>{
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(()=>{ if(_lastDaily) drawChart(_lastDaily); }, 180);
+  resizeTimer = setTimeout(()=>{
+    if(_lastDaily) drawChart(_lastDaily);
+    if(_lastRain) drawRainChart(_lastRain);
+  }, 180);
 });
 
 // Tooltip nativ
@@ -719,6 +753,123 @@ function getChartTooltip(){
   wrap.style.position='relative';
   wrap.appendChild(chartTooltip);
   return chartTooltip;
+}
+
+function drawRainChart(hourData){
+  _lastRain = hourData;
+  const canvas = document.getElementById('rainChart');
+  if(!canvas) return;
+  const wrap = canvas.parentElement;
+  if(!wrap) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = wrap.clientWidth;
+  const H = wrap.clientHeight;
+  if(W < 10 || H < 10){ setTimeout(()=>drawRainChart(hourData), 80); return; }
+
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  if(!ctx) return;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+
+  const precip = hourData.map(h=> h.precip||0);
+  const maxP = Math.max(1, ...precip, 0.6);
+  const n = hourData.length;
+  const pad = {l:38, r:18, t:20, b:36};
+  const chartW = W - pad.l - pad.r;
+  const chartH = H - pad.t - pad.b;
+  const xFor = i => pad.l + (n>1 ? (i/(n-1))*chartW : chartW/2);
+  const yFor = v => pad.t + chartH - (v/maxP)*chartH;
+
+  // grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1;
+  for(let g=0; g<=3; g++){
+    const y = pad.t + (g/3)*chartH;
+    ctx.beginPath(); ctx.moveTo(pad.l, Math.round(y)+0.5); ctx.lineTo(pad.l+chartW, Math.round(y)+0.5); ctx.stroke();
+    if(g===0 || g===3){
+      const val = (maxP * (1 - g/3)).toFixed(g===0?1:1);
+      ctx.fillStyle = 'rgba(142,205,255,0.75)';
+      ctx.font = '11px Segoe UI';
+      ctx.textAlign = 'right';
+      ctx.fillText(val+' mm', pad.l-6, y+3);
+    }
+  }
+
+  // bare
+  const barW = Math.max(14, Math.min(38, chartW/n*0.55));
+  hourData.forEach((h,i)=>{
+    const v = h.precip||0;
+    if(v<=0.001) return;
+    const x = xFor(i);
+    const y = yFor(v);
+    const hh = pad.t + chartH - y;
+    const grad = ctx.createLinearGradient(0,y,0,y+hh);
+    grad.addColorStop(0,'rgba(142,205,255,0.95)');
+    grad.addColorStop(1,'rgba(90,160,230,0.35)');
+    ctx.fillStyle = grad;
+    const r = 7;
+    ctx.beginPath();
+    ctx.moveTo(x - barW/2, y + r);
+    ctx.quadraticCurveTo(x - barW/2, y, x - barW/2 + r, y);
+    ctx.lineTo(x + barW/2 - r, y);
+    ctx.quadraticCurveTo(x + barW/2, y, x + barW/2, y + r);
+    ctx.lineTo(x + barW/2, y + hh);
+    ctx.lineTo(x - barW/2, y + hh);
+    ctx.closePath();
+    ctx.fill();
+
+    // valoare deasupra barei
+    ctx.fillStyle = '#a8d8ff';
+    ctx.font = '700 11px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText(v>=1? v.toFixed(1)+'mm' : v.toFixed(2)+'mm', x, y-6);
+  });
+
+  // linie trend subtire
+  ctx.strokeStyle = 'rgba(142,205,255,0.45)';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  hourData.forEach((h,i)=>{
+    const x = xFor(i), y = yFor(h.precip||0);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // puncte
+  hourData.forEach((h,i)=>{
+    const v = h.precip||0;
+    if(v<=0.001) return;
+    const x = xFor(i), y = yFor(v);
+    ctx.beginPath();
+    ctx.fillStyle = '#e6f4ff';
+    ctx.arc(x,y,3.5,0,Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = '#5aa0e6';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  });
+
+  // labels ore
+  ctx.fillStyle = 'rgba(255,255,255,0.72)';
+  ctx.font = '600 11px Segoe UI';
+  ctx.textAlign = 'center';
+  hourData.forEach((h,i)=>{
+    const x = xFor(i);
+    const label = i===0 ? 'Acum' : fmtTime(h.time);
+    ctx.fillText(label, x, H - 8);
+    if(h.pop>0){
+      ctx.fillStyle = 'rgba(142,205,255,0.9)';
+      ctx.font = '10px Segoe UI';
+      ctx.fillText(h.pop+'%', x, H - 20);
+      ctx.fillStyle = 'rgba(255,255,255,0.72)';
+      ctx.font = '600 11px Segoe UI';
+    }
+  });
 }
 
 function drawChart(daily){
