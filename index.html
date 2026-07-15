@@ -133,7 +133,16 @@ body{
 .hour-item .h-pop{font-size:10px; opacity:.9;}
 .rain-chart-card{height:260px; margin-top:12px;}
 .rain-chart-card .chart-wrap{height:200px;}
-@media (max-width:520px){ .rain-chart-card{height:230px;} }
+.wind-chart-card{height:300px; margin-top:12px;}
+.wind-chart-card .chart-wrap{height:240px;}
+.radar-card{padding:0; overflow:hidden; margin-top:12px; height:500px; display:flex; flex-direction:column; border-radius:var(--radius);}
+.radar-card .radar-head{display:flex; justify-content:space-between; align-items:center; padding:14px 16px; font-size:13px; color:var(--text-dim); border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.15);}
+.radar-card .radar-wrap{flex:1; position:relative; background:#0e1420;}
+.radar-card iframe{width:100%; height:100%; border:0; display:block; background:#0e1420;}
+.radar-card .radar-actions{padding:10px 14px; display:flex; justify-content:space-between; align-items:center; font-size:12px; gap:8px; background:rgba(0,0,0,0.18); flex-wrap:wrap;}
+.radar-card .radar-actions a{color:#8ecdff; text-decoration:none; padding:6px 12px; border-radius:10px; background:rgba(142,205,255,0.12); border:1px solid rgba(142,205,255,0.2); transition:background .2s;}
+.radar-card .radar-actions a:hover{background:rgba(142,205,255,0.22);}
+@media (max-width:520px){ .rain-chart-card{height:230px;} .wind-chart-card{height:270px;} .radar-card{height:420px;} }
 .daily-list{display:flex; flex-direction:column; gap:8px; padding:6px 10px 16px;}
 .day-item{display:grid; grid-template-columns: 90px 32px 1fr 90px 46px; align-items:center; gap:10px; padding:12px 14px; border-radius:14px; background:rgba(255,255,255,0.07); font-size:14px;}
 .day-item.today{background:rgba(255,255,255,0.16);}
@@ -620,15 +629,18 @@ function render(data){
 
   const hourlyHTML = [];
   const next6Data = []; // pentru graficul de ploaie
+  const next24Data = []; // pentru graficul de vant
   for(let i=startIdx; i<startIdx+24 && i<hourly.time.length; i++){
     const h = {
       time: hourly.time[i],
       temp: hourly.temperature_2m[i],
       pop: hourly.precipitation_probability[i],
       precip: hourly.precipitation[i],
+      wind: hourly.wind_speed_10m[i],
       code: hourly.weather_code[i]
     };
     if(i < startIdx + 6) next6Data.push(h);
+    next24Data.push(h);
     const hi = wmoInfo(h.code);
     const hasRain = (h.precip!=null && h.precip>0.05) || (hi.grp==='rain' || hi.grp==='storm' || hi.grp==='snow');
     const mmText = h.precip!=null && h.precip>=0.05 ? (h.precip>=1 ? h.precip.toFixed(1) : h.precip.toFixed(2)) + ' mm' : '';
@@ -645,6 +657,14 @@ function render(data){
     </div>`);
   }
   const hasRainNext6 = next6Data.some(h => h.precip!=null && h.precip>0.05);
+  const maxWind24 = Math.max(...next24Data.map(h=>h.wind||0), 1);
+  // Ventusky radar exact ca in screenshot: radar-map#p=lat,lon;zoom
+  const vLat = currentLoc.lat.toFixed(2);
+  const vLon = currentLoc.lon.toFixed(2);
+  const radarMapUrl = `https://www.ventusky.com/radar-map#p=${vLat},${vLon};8`;
+  const ventuskyRainUrl = `https://www.ventusky.com/?p=${vLat},${vLon};8;l=rain-3h`;
+  const ventuskyWindUrl = `https://www.ventusky.com/?p=${vLat},${vLon};8;l=wind-10m`;
+  const ventuskyRadarLayerUrl = `https://www.ventusky.com/?p=${vLat},${vLon};8;l=radar`;
 
   const globalMin = Math.min(...daily.temperature_2m_min);
   const globalMax = Math.max(...daily.temperature_2m_max);
@@ -722,23 +742,49 @@ function render(data){
       <div class="chart-head"><span>📈 Temperaturi și precipitații</span><span style="font-size:11px; opacity:.7">10 zile</span></div>
       <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
     </div>
+
+    <div class="section-title">💨 Vânt în următoarele 24h — penultimul card</div>
+    <div class="card chart-card wind-chart-card">
+      <div class="chart-head"><span>🌬️ Viteză vânt</span><span style="font-size:11px; opacity:.7">max ${maxWind24.toFixed(0)} km/h · medie ${ (next24Data.reduce((a,b)=>a+(b.wind||0),0)/next24Data.length).toFixed(0)} km/h</span></div>
+      <div class="chart-wrap"><canvas id="windChart"></canvas></div>
+    </div>
+
+    <div class="section-title">🛰️ Radar meteo live — Ventusky — ultimul card</div>
+    <div class="card radar-card">
+      <div class="radar-head"><span>📡 Radar ${escapeHTML(placeStr)} — live</span><span style="font-size:11px; opacity:.7">dBZ + fulgere</span></div>
+      <div class="radar-wrap">
+        <iframe id="ventuskyRadar" loading="lazy" src="${radarMapUrl}" title="Ventusky Radar ${escapeHTML(placeStr)}" referrerpolicy="no-referrer-when-downgrade" allow="fullscreen"></iframe>
+      </div>
+      <div class="radar-actions">
+        <span style="color:var(--text-faint)">Sursa: Ventusky — radar-map ca în screenshot</span>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a href="${radarMapUrl}" target="_blank" rel="noopener">📡 Radar map</a>
+          <a href="${ventuskyRainUrl}" target="_blank" rel="noopener">🌧️ Ploaie</a>
+          <a href="${ventuskyWindUrl}" target="_blank" rel="noopener">💨 Vânt</a>
+          <a href="${ventuskyRadarLayerUrl}" target="_blank" rel="noopener">⚡ Furtuni ↗</a>
+        </div>
+      </div>
+    </div>
   `;
 
   // desenam graficele dupa ce DOM-ul e stabil
   requestAnimationFrame(()=> {
     drawChart(daily);
     if(hasRainNext6) drawRainChart(next6Data);
+    drawWindChart(next24Data);
   });
 }
 
 let _lastDaily = null;
 let _lastRain = null;
+let _lastWind = null;
 let resizeTimer = null;
 window.addEventListener('resize', ()=>{
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(()=>{
     if(_lastDaily) drawChart(_lastDaily);
     if(_lastRain) drawRainChart(_lastRain);
+    if(_lastWind) drawWindChart(_lastWind);
   }, 180);
 });
 
@@ -869,6 +915,104 @@ function drawRainChart(hourData){
       ctx.fillStyle = 'rgba(255,255,255,0.72)';
       ctx.font = '600 11px Segoe UI';
     }
+  });
+}
+
+function drawWindChart(hourData){
+  _lastWind = hourData;
+  const canvas = document.getElementById('windChart');
+  if(!canvas) return;
+  const wrap = canvas.parentElement;
+  if(!wrap) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = wrap.clientWidth;
+  const H = wrap.clientHeight;
+  if(W < 10 || H < 10){ setTimeout(()=>drawWindChart(hourData), 80); return; }
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  if(!ctx) return;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  const winds = hourData.map(h=> h.wind||0);
+  const maxW = Math.max(8, ...winds, 5);
+  const minW = 0;
+  const n = hourData.length;
+  const pad = {l:42, r:16, t:24, b:36};
+  const chartW = W - pad.l - pad.r;
+  const chartH = H - pad.t - pad.b;
+  const xFor = i => pad.l + (n>1 ? (i/(n-1))*chartW : chartW/2);
+  const yFor = v => pad.t + chartH - ((v-minW)/(maxW-minW))*chartH;
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1;
+  for(let g=0; g<=3; g++){
+    const y = pad.t + (g/3)*chartH;
+    ctx.beginPath(); ctx.moveTo(pad.l, Math.round(y)+0.5); ctx.lineTo(pad.l+chartW, Math.round(y)+0.5); ctx.stroke();
+    const val = Math.round(maxW - (g/3)*(maxW-minW));
+    ctx.fillStyle = 'rgba(180,210,255,0.65)';
+    ctx.font = '11px Segoe UI';
+    ctx.textAlign = 'right';
+    ctx.fillText(val+' km/h', pad.l-6, y+3);
+  }
+  const gradFill = ctx.createLinearGradient(0, pad.t, 0, pad.t+chartH);
+  gradFill.addColorStop(0,'rgba(120,200,255,0.32)');
+  gradFill.addColorStop(1,'rgba(120,200,255,0)');
+  ctx.fillStyle = gradFill;
+  ctx.beginPath();
+  ctx.moveTo(xFor(0), pad.t+chartH);
+  winds.forEach((v,i)=>{
+    const x = xFor(i), y = yFor(v);
+    if(i===0) ctx.lineTo(x,y);
+    else {
+      const prevX = xFor(i-1), prevY = yFor(winds[i-1]);
+      const cpx = (prevX + x)/2;
+      ctx.quadraticCurveTo(cpx, prevY, x, y);
+    }
+  });
+  ctx.lineTo(xFor(n-1), pad.t+chartH);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#7ec8ff';
+  ctx.lineWidth = 2.4;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  winds.forEach((v,i)=>{
+    const x = xFor(i), y = yFor(v);
+    if(i===0) ctx.moveTo(x,y);
+    else {
+      const prevX = xFor(i-1), prevY = yFor(winds[i-1]);
+      const cpx = (prevX + x)/2;
+      ctx.quadraticCurveTo(cpx, prevY, x, y);
+    }
+  });
+  ctx.stroke();
+  hourData.forEach((h,i)=>{
+    const x = xFor(i), y = yFor(h.wind||0);
+    if(i%3===0 || h.wind === Math.max(...winds)){
+      ctx.beginPath();
+      ctx.fillStyle = '#e6f4ff';
+      ctx.arc(x,y,3.2,0,Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = '#7ec8ff';
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+      ctx.fillStyle = '#a8d8ff';
+      ctx.font = '700 10px Segoe UI';
+      ctx.textAlign = 'center';
+      if(h.wind>=2) ctx.fillText(Math.round(h.wind)+' km/h', x, y-9);
+    }
+  });
+  ctx.fillStyle = 'rgba(255,255,255,0.72)';
+  ctx.font = '600 10px Segoe UI';
+  ctx.textAlign = 'center';
+  hourData.forEach((h,i)=>{
+    if(i%2!==0 && n>12) return;
+    const x = xFor(i);
+    const label = i===0 ? 'Acum' : fmtTime(h.time);
+    ctx.fillText(label, x, H - 8);
   });
 }
 
